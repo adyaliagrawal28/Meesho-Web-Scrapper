@@ -9,7 +9,8 @@ let productScheme = new mongoose.Schema({
     sku : String,
     company : String,
     url : String,
-    updatestatus : String
+    updatestatus : String,
+    rating : String,
 });
 
 module.exports = mongoose.model('Product', productScheme);

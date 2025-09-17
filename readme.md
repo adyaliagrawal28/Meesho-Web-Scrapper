@@ -1,3 +1,3 @@
-#Walmart WebScrapper App
+#Meesho WebScraper App
 
-This app is used to track the walmart products stock and prices.
+This app is used to track the meesho products stock and prices.

@@ -22,7 +22,7 @@ router.get('/login', (req,res)=> {
     res.render('./users/login');
 });
 
-router.get('/signup', isAuthenticatedUser, (req,res)=> {
+router.get('/signup',  (req,res)=> {
     res.render('./users/signup');
 });
 
@@ -88,7 +88,7 @@ router.post('/login', passport.authenticate('local', {
 }));
 
 
-router.post('/signup', isAuthenticatedUser, (req, res)=> {
+router.post('/signup', (req, res)=> {
     let {name, email, password} = req.body;
 
     let userData = {

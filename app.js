@@ -20,13 +20,17 @@ const User = require('./models/usermodel');
 
 dotenv.config({path : './config.env'});
 
-mongoose.connect(process.env.DATABASE, {
-    useNewUrlParser : true,
-    useUnifiedTopology : true,
-    useCreateIndex : true
-}).then(con => {
-    console.log('MongoDB Database connected successfully.');
-});
+mongoose
+  .connect(process.env.DATABASE, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+  })
+  .then((res) => {
+    console.log("Database connected");
+  })
+  .catch((error) => {
+    console.log(error);
+  });
 
 //middleware for session
 app.use(session({

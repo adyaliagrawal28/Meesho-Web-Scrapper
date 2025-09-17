@@ -20,50 +20,86 @@ let browser;
 //Scrape Function
 async function scrapeData(url, page) {
     try {
-        await page.goto(url, {waitUntil: 'load', timeout : 0});
-        const html = await page.evaluate(()=> document.body.innerHTML);
-        const $ = await cheerio.load(html);
+        // Set headers to mimic a genuine user
+        // await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36');
+        await page.setUserAgent(
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36'
+          );
+        await page.setExtraHTTPHeaders({
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Accept-Encoding': 'gzip, deflate, br',
+            'Connection': 'keep-alive'
+        });
 
-        let title = $("h1").attr('content');
-        let price = $(".price-characteristic").attr("content");
+        // Navigate to the page
+        await page.goto(url, { waitUntil: 'networkidle2', timeout: 0 });
 
-        if(!price) {
-            let dollars = $("#price > div > span.hide-content.display-inline-block-m > span > span.price-group.price-out-of-stock > span.price-characteristic").text();
-            let cents = $("#price > div > span.hide-content.display-inline-block-m > span > span.price-group.price-out-of-stock > span.price-mantissa").text();
-            price = dollars+'.'+cents;
-        }
+        // Add a delay to mimic human behavior
+        // await page.waitForSelection(2000); // 2 seconds delay
 
-        let seller = '';
-        let checkSeller = $('.seller-name');
-        if(checkSeller) {
-            seller = checkSeller.text();
-        }
+        // Get the HTML content of the page
+        const html = await page.content(); // Better to use page.content() directly
+        const $ = cheerio.load(html);
 
-        let outOfStock = '';
-        let checkOutOfStock = $('.prod-ProductOffer-oosMsg');
-        if(checkOutOfStock) {
-            outOfStock = checkOutOfStock.text();
-        }
+        const jsonData = $('#__NEXT_DATA__').html();
 
-        let deliveryNotAvaiable = '';
-        let checkDeliveryNotAvailable = $('.fulfillment-shipping-text');
-        if(checkDeliveryNotAvailable) {
-            deliveryNotAvaiable = checkDeliveryNotAvailable.text();
-        }
+        // Parse the JSON string if needed
+        const data = JSON.parse(jsonData);
+      
+        // Log or use the extracted data
+        console.log(data);
 
-        let stock = '';
+        let price = data.props.pageProps.initialState.product.details.data.suppliers[0].price;
+        let title = data.props.pageProps.initialState.product.details.data.name;
+        let rating = data.props.pageProps.initialState.product.details.data.review_summary.data.average_rating;
 
-        if(!(seller.includes('Walmart')) || outOfStock.includes('Out of Stock') || 
-            deliveryNotAvaiable.includes('Delivery not available')) {
-                stock = 'Out of stock';
-            } else {
-                stock = 'In stock';
-            }
+        // if(!price) {
+        //     let dollars = $("#price > div > span.hide-content.display-inline-block-m > span > span.price-group.price-out-of-stock > span.price-characteristic").text();
+        //     let cents = $("#price > div > span.hide-content.display-inline-block-m > span > span.price-group.price-out-of-stock > span.price-mantissa").text();
+        //     price = dollars+'.'+cents;
+        // }
+
+        // let seller = '';
+        // let checkSeller = $('.seller-name');
+        // if(checkSeller) {
+        //     seller = checkSeller.text();
+        // }
+
+        // let outOfStock = '';
+        // let checkOutOfStock = $('.prod-ProductOffer-oosMsg');
+        // if(checkOutOfStock) {
+        //     outOfStock = checkOutOfStock.text();
+        // }
+
+        // let deliveryNotAvaiable = '';
+        // let checkDeliveryNotAvailable = $('.fulfillment-shipping-text');
+        // if(checkDeliveryNotAvailable) {
+        //     deliveryNotAvaiable = checkDeliveryNotAvailable.text();
+        // }
+
+        // let stock = '';
+
+        // if(!(seller.includes('Walmart')) || outOfStock.includes('Out of Stock') || 
+        //     deliveryNotAvaiable.includes('Delivery not available')) {
+        //         stock = 'Out of stock';
+        //     } else {
+        //         stock = 'In stock';
+        //     }
+        // if (url === 'https://www.samsclub.com/p/frito-lay-big-grab-variety-mix-30-pk/P03002660?xid=hpg_carousel_rich-relevance.product_0_2') {
+        //     title = 'Frito-Lay Variety Pack Chips, 30 pk.';
+        //     price = '18.48';
+        //     stock = 'In stock';
+        // }
+        // if (url === 'https://www.samsclub.com/p/frito-lay-premiere-mix-variety-pack-chips-30ct/P03002659?xid=hpg_carousel_rich-relevance.product_0_3') {
+        //     title = 'Frito-Lay Premiere Mix Variety Pack Chips, 30 pk.';
+        //     price = '18.48';
+        //     stock = 'In stock';
+        // }
 
         return {
             title,
             price,
-            stock,
+            rating,
             url
         }
 
@@ -92,14 +128,29 @@ router.get('/product/new', isAuthenticatedUser, async (req, res)=> {
     try {
         let url = req.query.search;
         if(url) {
-            browser = await puppeteer.launch({ args: ['--no-sandbox'] });
+            browser = await puppeteer.launch(options={
+                headless: true,
+                args: [
+                    '--disable-gpu',
+                    '--disable-dev-shm-usage',
+                    '--disable-setuid-sandbox',
+                    '--no-first-run',
+                    '--no-sandbox',
+                    '--no-zygote',
+                    '--deterministic-fetch',
+                    '--disable-features=IsolateOrigins',
+                    '--disable-site-isolation-trials',
+                    // '--single-process',
+                ],
+            });
             const page = await browser.newPage();
             let result = await scrapeData(url,page);
 
             let productData = {
                 title : result.title,
                 price : '$'+result.price,
-                stock : result.stock,
+                rating : result.rating,
+                stock : 'In stock',
                 productUrl : result.url
             };
             res.render('./admin/newproduct', {productData : productData});
@@ -213,7 +264,7 @@ router.get('/update', isAuthenticatedUser, (req,res)=> {
 //POST routes starts here
 
 router.post('/product/new', isAuthenticatedUser, (req,res)=> {
-    let {title, price, stock, url, sku} = req.body;
+    let {title, price, stock, url, sku, rating} = req.body;
 
     let newProduct = {
         title : title,
@@ -224,7 +275,8 @@ router.post('/product/new', isAuthenticatedUser, (req,res)=> {
         sku : sku,
         company : "Walmart",
         url : url,
-        updatestatus : "Updated"
+        updatestatus : "Updated",
+        rating : rating
     };
 
     Product.findOne({ sku : sku})
