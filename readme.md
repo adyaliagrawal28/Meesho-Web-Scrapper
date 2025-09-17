@@ -26,3 +26,4 @@ Integrating MongoDB Atlas with Mongoose
 Implementing secure authentication with Passport.js
 Building an admin dashboard for live product tracking
 Scraping and handling dynamic product data
+
